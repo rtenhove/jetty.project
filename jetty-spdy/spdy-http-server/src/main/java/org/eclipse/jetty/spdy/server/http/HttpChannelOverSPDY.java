@@ -162,15 +162,14 @@ public class HttpChannelOverSPDY extends HttpChannel
         }
 
         // At last, add the Host header.
-        if (hostPort!=null)
-            fields.add(hostPort);
+        fields.add(hostPort);
 
         Fields.Field schemeHeader = headers.get(HTTPSPDYHeader.SCHEME.name(version));
         
         HttpURI uri = new HttpURI(uriHeader.getValue());
         if (uri.getScheme()==null && schemeHeader!=null)
             uri.setScheme(schemeHeader.getValue());
-        if (uri.getHost()==null && hostPort!=null)
+        if (uri.getHost()==null)
             uri.setAuthority(hostPort.getHost(),hostPort.getPort());
         
         MetaData.Request request = new MetaData.Request(httpMethod==null?methodHeader.getValue():httpMethod.asString(), uri, httpVersion, fields);
