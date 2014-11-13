@@ -30,6 +30,8 @@ import org.eclipse.jetty.util.Callback;
 import org.eclipse.jetty.util.log.Log;
 import org.eclipse.jetty.util.log.Logger;
 
+import static org.eclipse.jetty.server.HttpInput.State.*;
+
 /**
  * {@link HttpInput} provides an implementation of {@link ServletInputStream} for {@link HttpChannel}.
  * <p/>
@@ -295,7 +297,7 @@ public abstract class HttpInput extends ServletInputStream implements Runnable
     {
         synchronized (lock())
         {
-            return _contentState==EARLY_EOF;
+            return _contentState == EARLY_EOF;
         }
     }
     
@@ -345,7 +347,7 @@ public abstract class HttpInput extends ServletInputStream implements Runnable
     {
         synchronized (lock())
         {
-            return _contentState==ASYNC;
+            return _contentState == ASYNC;
         }
     }
     
@@ -473,9 +475,48 @@ public abstract class HttpInput extends ServletInputStream implements Runnable
         }
     }
 
-    protected static abstract class State
-    {
-        public void waitForContent(HttpInput in) throws IOException
+    protected enum State {
+        STREAM()
+        {
+            @Override
+            public void waitForContent(HttpInput input) throws IOException
+            {
+                input.blockForContent();
+            }
+        },
+        ASYNC()
+        {
+            @Override
+            public int noContent() throws IOException
+            {
+                return 0;
+            }
+        },
+        EARLY_EOF()
+        {
+            @Override
+            public int noContent() throws IOException
+            {
+                throw new EofException("Early EOF");
+            }
+
+            @Override
+            public boolean isEOF()
+            {
+                return true;
+            }
+        },
+        EOF()
+        {
+            @Override
+            public boolean isEOF()
+            {
+                return true;
+            }
+        },
+        ;
+
+        public void waitForContent(HttpInput in) throws  IOException
         {
         }
 
@@ -490,69 +531,4 @@ public abstract class HttpInput extends ServletInputStream implements Runnable
         }
     }
 
-    protected static final State STREAM = new State()
-    {
-        @Override
-        public void waitForContent(HttpInput input) throws IOException
-        {
-            input.blockForContent();
-        }
-
-        @Override
-        public String toString()
-        {
-            return "STREAM";
-        }
-    };
-
-    protected static final State ASYNC = new State()
-    {
-        @Override
-        public int noContent() throws IOException
-        {
-            return 0;
-        }
-
-        @Override
-        public String toString()
-        {
-            return "ASYNC";
-        }
-    };
-
-    protected static final State EARLY_EOF = new State()
-    {
-        @Override
-        public int noContent() throws IOException
-        {
-            throw new EofException("Early EOF");
-        }
-
-        @Override
-        public boolean isEOF()
-        {
-            return true;
-        }
-
-        @Override
-        public String toString()
-        {
-            return "EARLY_EOF";
-        }
-    };
-
-    protected static final State EOF = new State()
-    {
-        @Override
-        public boolean isEOF()
-        {
-            return true;
-        }
-
-        @Override
-        public String toString()
-        {
-            return "EOF";
-        }
-    };
 }
